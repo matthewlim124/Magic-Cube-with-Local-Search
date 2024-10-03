@@ -264,7 +264,7 @@ class MagicCube:
         return current_h
     
     def simulated_annealing(self,  cooling_schedule):
-        """Perform Simulated Annealing with a customizable cooling schedule."""
+        
         max_iterations=50000
         initial_temp=1000
         min_temp=0
@@ -332,3 +332,72 @@ class MagicCube:
     def inverse_decay_schedule(self, initial_temp, t, beta=0.001):
         """Inverse decay cooling schedule."""
         return initial_temp / (1 + beta * t)
+
+
+    def random_mutation(self):
+            """Perform mutation by swapping two random numbers in the cube."""
+            x1, y1, z1 = random.randint(0, self.size - 1), random.randint(0, self.size - 1), random.randint(0, self.size - 1)
+            x2, y2, z2 = random.randint(0, self.size - 1), random.randint(0, self.size - 1), random.randint(0, self.size - 1)
+            self.cube[x1][y1][z1], self.cube[x2][y2][z2] = self.cube[x2][y2][z2], self.cube[x1][y1][z1]
+
+    def crossover(self, other_cube):
+            """Perform crossover by combining two cubes."""
+            new_cube = MagicCube(self.size)
+            for i in range(self.size):
+                for j in range(self.size):
+                    for k in range(self.size):
+                        if random.random() < 0.5:
+                            new_cube.cube[i][j][k] = self.cube[i][j][k]
+                        else:
+                            new_cube.cube[i][j][k] = other_cube.cube[i][j][k]
+            return new_cube
+
+    def genetic_algorithm(self, population_size=50, generations=100, mutation_rate=0.1):
+            """Perform Genetic Algorithm to find the magic cube."""
+            # Step 1: Initialize population
+            population = [MagicCube(self.size) for _ in range(population_size)]
+
+            for generation in range(generations):
+                # Step 2: Evaluate the fitness of the population
+                fitness_scores = [(individual, individual.calculate_h()) for individual in population]
+                fitness_scores.sort(key=lambda x: x[1], reverse=True)  # Sort by fitness
+
+                # Check if we have a perfect solution
+                best_individual, best_fitness = fitness_scores[0]
+                print(f"Generation {generation}: Best fitness = {best_fitness}")
+                if best_fitness == self.size:  # Assuming size is the max possible fitness (e.g., max pillars/diagonals)
+                    return best_individual
+
+                # Step 3: Selection (Roulette wheel selection or tournament selection)
+                selected_individuals = self.selection(fitness_scores)
+
+                # Step 4: Crossover (Recombination)
+                new_population = []
+                while len(new_population) < population_size:
+                    parent1, parent2 = random.sample(selected_individuals, 2)
+                    child = parent1.crossover(parent2)
+                    new_population.append(child)
+
+                # Step 5: Mutation
+                for individual in new_population:
+                    if random.random() < mutation_rate:
+                        individual.random_mutation()
+
+                # Update population
+                population = new_population
+
+            return best_individual
+
+    def selection(self, fitness_scores):
+            """Roulette wheel selection based on fitness scores."""
+            total_fitness = sum(fitness for _, fitness in fitness_scores)
+            selected_individuals = []
+            for _ in range(len(fitness_scores) // 2):
+                pick = random.uniform(0, total_fitness)
+                current = 0
+                for individual, fitness in fitness_scores:
+                    current += fitness
+                    if current > pick:
+                        selected_individuals.append(individual)
+                        break
+            return selected_individuals
